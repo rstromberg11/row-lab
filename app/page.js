@@ -30,9 +30,9 @@ function parseTime(input) {
     return mins * 60 + secs + hundredths;
   }
 
-  // Raw seconds fallback
-  const value = Number(cleaned);
-  return isNaN(value) ? null : value;
+  // No fallback — partial inputs (e.g. "4", "42") return null
+  // and do not trigger a result until a complete time is entered.
+  return null;
 }
 
 // ─── Formatting ──────────────────────────────────────────────────────────────
