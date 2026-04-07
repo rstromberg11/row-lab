@@ -1,38 +1,64 @@
 "use client";
 import { useMemo, useState } from "react";
 
-// ── Time parsing ──────────────────────────────────────────────────────────────
-// Accepts several input styles and returns total seconds (or null if invalid).
-// Used both for calculation and to determine if a field is "complete".
+// ── Time parsing (strict — used for live calculation) ────────────────────────
+// Only accepts COMPLETE times. Partial inputs return null → no premature calc.
 //
-//   "4:17.55"  → 257.55   (already formatted)
-//   "41755"    → 257.55   (5-digit shorthand: m ss hh)
-//   "421755"   → 2537.55  (6-digit shorthand: mm ss hh — for longer pieces)
-//   "4:17"     → 257.00   (m:ss with no hundredths — accepted as 4:17.00)
-//   "417"      → 257.00   (3-digit shorthand: m ss — accepted as 4:17.00)
-//   "4"        → null     (incomplete — no calculation triggered)
-//   "42"       → null     (incomplete)
+//   "4:17.55"  → 257.55   ✓ colon format with decimal
+//   "41755"    → 257.55   ✓ 5-digit shorthand
+//   "4:17"     → null     ✗ no decimal — incomplete (calc waits for blur)
+//   "417"      → null     ✗ 3-digit shorthand — incomplete (calc waits for blur)
+//   "4", "42"  → null     ✗ too few digits
 function parseTime(input) {
   if (!input) return null;
   const cleaned = input.trim();
 
-  // ── Colon format: "4:17.55" or "4:17" ──
+  // Colon format — must include a decimal point to be considered complete
+  if (cleaned.includes(":")) {
+    if (!cleaned.includes(".")) return null; // e.g. "4:17" → wait for blur to add .00
+    const [minPart, secPart] = cleaned.split(":");
+    const minutes = Number(minPart);
+    const seconds = Number(secPart);
+    if (isNaN(minutes) || isNaN(seconds)) return null;
+    if (secPart.replace(/\D/g, "").length < 2) return null;
+    if (seconds >= 60) return null;
+    return minutes * 60 + seconds;
+  }
+
+  // Digit shorthand — must be 5+ digits (includes hundredths)
+  const digits = cleaned.replace(/\D/g, "");
+  if (digits.length >= 5) {
+    const hundredths = Number(digits.slice(-2)) / 100;
+    const secs = Number(digits.slice(-4, -2));
+    const mins = Number(digits.slice(0, -4));
+    if (isNaN(mins) || isNaN(secs) || isNaN(hundredths)) return null;
+    if (secs >= 60) return null;
+    return mins * 60 + secs + hundredths;
+  }
+
+  return null; // incomplete — no calculation
+}
+
+// ── Time parsing (permissive — used only for blur reformatting) ───────────────
+// Also accepts m:ss without decimal and 3-digit shorthand.
+// These are completed to m:ss.00 by formatTime() and written back to the field.
+function parseTimePermissive(input) {
+  if (!input) return null;
+  const cleaned = input.trim();
+
   if (cleaned.includes(":")) {
     const [minPart, secPart] = cleaned.split(":");
     const minutes = Number(minPart);
     const seconds = Number(secPart);
     if (isNaN(minutes) || isNaN(seconds)) return null;
-    // Require at least m:ss (not just "4:")
     if (secPart.replace(/\D/g, "").length < 2) return null;
-    // Validate seconds range
     if (seconds >= 60) return null;
     return minutes * 60 + seconds;
   }
 
-  // ── Digit shorthand ──
   const digits = cleaned.replace(/\D/g, "");
 
-  // 3 digits: m ss  → e.g. "417" = 4:17.00
+  // 3 digits: m ss → e.g. "417" = 4:17.00
   if (digits.length === 3) {
     const mins = Number(digits[0]);
     const secs = Number(digits.slice(1));
@@ -50,7 +76,7 @@ function parseTime(input) {
     return mins * 60 + secs + hundredths;
   }
 
-  return null; // 1, 2, or 4 digits — incomplete
+  return null;
 }
 
 // ── Canonical display format ──────────────────────────────────────────────────
@@ -62,10 +88,10 @@ function formatTime(totalSeconds) {
 }
 
 // ── On-blur formatter ─────────────────────────────────────────────────────────
-// When the user leaves a field, reformat their raw input into "m:ss.hh".
-// If the input can't be parsed yet, leave it as-is.
+// Uses the permissive parser so "417" and "4:17" both become "4:17.00".
+// If the input still can't be parsed (e.g. garbage text), it's left as-is.
 function reformatOnBlur(raw) {
-  const parsed = parseTime(raw);
+  const parsed = parseTimePermissive(raw);
   return parsed !== null ? formatTime(parsed) : raw;
 }
 
@@ -217,9 +243,8 @@ export default function Page() {
               margin: 0,
             }}
           >
-            Enter times for both pieces. RowLab compares total piece times —
-            the method used by elite programs that accounts for actual boat
-            speed, not just who crossed first.
+            Enter times for both pieces. RowLab compares each athlete's total
+            time — not just who crossed first.
           </p>
         </section>
 
@@ -308,17 +333,45 @@ export default function Page() {
 }
 
 // ── TimeInput ─────────────────────────────────────────────────────────────────
-// User types freely. On blur, input is reformatted to "m:ss.hh".
-// Accepts: "41755", "4:17.55", "417", "4:17" — all become "4:17.55"/"4:17.00".
-// Shows an error state if the entry has enough digits to be complete but is invalid.
+// Letters are blocked silently at keystroke level — consistent with mobile
+// where inputMode="decimal" already restricts to numbers.
+// Only digits, colon, period, and control/navigation keys are accepted.
+// Pasted content is filtered the same way.
+// On blur, valid input is reformatted to "m:ss.hh".
+// Shows an error if the entry is complete but invalid (e.g. seconds ≥ 60).
+
+// Keys that are always allowed regardless of character
+const NAV_KEYS = new Set([
+  "Backspace", "Delete", "Tab", "Enter", "Escape",
+  "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown",
+  "Home", "End",
+]);
+
 function TimeInput({ label, value, onChange }) {
   const digits = value.replace(/[^0-9]/g, "");
-  // Show error only when the user has typed enough to form a complete time
-  // but the result is still invalid (e.g. "36022" → seconds = 60)
   const isError =
     value !== "" &&
     parseTime(value) === null &&
     (digits.length === 3 || digits.length >= 5);
+
+  const handleKeyDown = (e) => {
+    // Always allow: navigation, editing, and keyboard shortcuts (copy/paste/etc.)
+    if (e.ctrlKey || e.metaKey) return;
+    if (NAV_KEYS.has(e.key)) return;
+    // Allow digits, colon, and period
+    if (/^[0-9]$/.test(e.key)) return;
+    if (e.key === ":" || e.key === ".") return;
+    // Block everything else — letters, symbols, etc.
+    e.preventDefault();
+  };
+
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text");
+    // Strip anything that isn't a digit, colon, or period
+    const filtered = pasted.replace(/[^0-9:.]/g, "");
+    onChange(filtered);
+  };
 
   return (
     <div>
@@ -337,6 +390,8 @@ function TimeInput({ label, value, onChange }) {
         type="text"
         inputMode="decimal"
         value={value}
+        onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
         onChange={(e) => onChange(e.target.value)}
         onBlur={(e) => onChange(reformatOnBlur(e.target.value))}
         placeholder="41755 → 4:17.55"
@@ -355,14 +410,7 @@ function TimeInput({ label, value, onChange }) {
         }}
       />
       {isError && (
-        <div
-          style={{
-            marginTop: 6,
-            fontSize: 12,
-            color: "#ef4444",
-            fontWeight: 500,
-          }}
-        >
+        <div style={{ marginTop: 6, fontSize: 12, color: "#ef4444", fontWeight: 500 }}>
           Invalid — seconds must be 00–59
         </div>
       )}
