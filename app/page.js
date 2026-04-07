@@ -25,12 +25,12 @@ function parseTime(input) {
     return minutes * 60 + seconds;
   }
 
-  // Digit shorthand — must be 5+ digits (includes hundredths)
+  // Digit shorthand — must be exactly 5 digits: m ss hh (minutes always 0–9)
   const digits = cleaned.replace(/\D/g, "");
-  if (digits.length >= 5) {
-    const hundredths = Number(digits.slice(-2)) / 100;
-    const secs = Number(digits.slice(-4, -2));
-    const mins = Number(digits.slice(0, -4));
+  if (digits.length === 5) {
+    const mins = Number(digits[0]);
+    const secs = Number(digits.slice(1, 3));
+    const hundredths = Number(digits.slice(3, 5)) / 100;
     if (isNaN(mins) || isNaN(secs) || isNaN(hundredths)) return null;
     if (secs >= 60) return null;
     return mins * 60 + secs + hundredths;
@@ -66,11 +66,11 @@ function parseTimePermissive(input) {
     return mins * 60 + secs;
   }
 
-  // 5–6 digits: m ss hh or mm ss hh
-  if (digits.length >= 5) {
-    const hundredths = Number(digits.slice(-2)) / 100;
-    const secs = Number(digits.slice(-4, -2));
-    const mins = Number(digits.slice(0, -4));
+  // 5 digits only: m ss hh (minutes always 0–9, seat races never exceed 9 min)
+  if (digits.length === 5) {
+    const mins = Number(digits[0]);
+    const secs = Number(digits.slice(1, 3));
+    const hundredths = Number(digits.slice(3, 5)) / 100;
     if (isNaN(mins) || isNaN(secs) || isNaN(hundredths)) return null;
     if (secs >= 60) return null;
     return mins * 60 + secs + hundredths;
@@ -349,20 +349,41 @@ const NAV_KEYS = new Set([
 
 function TimeInput({ label, value, onChange }) {
   const digits = value.replace(/[^0-9]/g, "");
+  // Use permissive parser for error detection — strict parseTime rejects valid
+  // incomplete inputs like "417" (4:17.00) which would cause false positives.
   const isError =
     value !== "" &&
-    parseTime(value) === null &&
+    parseTimePermissive(value) === null &&
     (digits.length === 3 || digits.length >= 5);
+
+  const isShorthand = !value.includes(":");
 
   const handleKeyDown = (e) => {
     // Always allow: navigation, editing, and keyboard shortcuts (copy/paste/etc.)
     if (e.ctrlKey || e.metaKey) return;
     if (NAV_KEYS.has(e.key)) return;
-    // Allow digits, colon, and period
-    if (/^[0-9]$/.test(e.key)) return;
+    // Allow digits — but block a 6th digit in shorthand mode (max 9 min = 5 digits)
+    if (/^[0-9]$/.test(e.key)) {
+      if (isShorthand && digits.length >= 5) {
+        e.preventDefault();
+        return;
+      }
+      return;
+    }
     if (e.key === ":" || e.key === ".") return;
     // Block everything else — letters, symbols, etc.
     e.preventDefault();
+  };
+
+  const handleChange = (e) => {
+    const raw = e.target.value;
+    const newDigits = raw.replace(/[^0-9]/g, "");
+    // Auto-format immediately when the 5th digit is typed in shorthand mode
+    if (!raw.includes(":") && !raw.includes(".") && newDigits.length === 5) {
+      onChange(reformatOnBlur(raw));
+      return;
+    }
+    onChange(raw);
   };
 
   const handlePaste = (e) => {
@@ -392,7 +413,7 @@ function TimeInput({ label, value, onChange }) {
         value={value}
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={handleChange}
         onBlur={(e) => onChange(reformatOnBlur(e.target.value))}
         placeholder="41755 → 4:17.55"
         style={{
