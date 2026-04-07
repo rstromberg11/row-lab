@@ -24,6 +24,8 @@ function parseTime(input) {
     if (isNaN(minutes) || isNaN(seconds)) return null;
     // Require at least m:ss (not just "4:")
     if (secPart.replace(/\D/g, "").length < 2) return null;
+    // Validate seconds range
+    if (seconds >= 60) return null;
     return minutes * 60 + seconds;
   }
 
@@ -308,7 +310,16 @@ export default function Page() {
 // ── TimeInput ─────────────────────────────────────────────────────────────────
 // User types freely. On blur, input is reformatted to "m:ss.hh".
 // Accepts: "41755", "4:17.55", "417", "4:17" — all become "4:17.55"/"4:17.00".
+// Shows an error state if the entry has enough digits to be complete but is invalid.
 function TimeInput({ label, value, onChange }) {
+  const digits = value.replace(/[^0-9]/g, "");
+  // Show error only when the user has typed enough to form a complete time
+  // but the result is still invalid (e.g. "36022" → seconds = 60)
+  const isError =
+    value !== "" &&
+    parseTime(value) === null &&
+    (digits.length === 3 || digits.length >= 5);
+
   return (
     <div>
       <label
@@ -317,7 +328,7 @@ function TimeInput({ label, value, onChange }) {
           marginBottom: 8,
           fontSize: 13,
           fontWeight: 500,
-          color: "#475569",
+          color: isError ? "#ef4444" : "#475569",
         }}
       >
         {label}
@@ -328,21 +339,33 @@ function TimeInput({ label, value, onChange }) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onBlur={(e) => onChange(reformatOnBlur(e.target.value))}
-        placeholder="4:17.55"
+        placeholder="41755 → 4:17.55"
         style={{
           width: "100%",
           boxSizing: "border-box",
           padding: "14px 16px",
           borderRadius: 14,
-          border: "1.5px solid #cbd5e1",
+          border: isError ? "1.5px solid #ef4444" : "1.5px solid #cbd5e1",
           outline: "none",
           fontSize: 18,
           fontWeight: 500,
-          background: "white",
+          background: isError ? "#fff5f5" : "white",
           color: "#0f172a",
           WebkitAppearance: "none",
         }}
       />
+      {isError && (
+        <div
+          style={{
+            marginTop: 6,
+            fontSize: 12,
+            color: "#ef4444",
+            fontWeight: 500,
+          }}
+        >
+          Invalid — seconds must be 00–59
+        </div>
+      )}
     </div>
   );
 }
