@@ -187,14 +187,7 @@ export default function Page() {
       <div style={{ maxWidth: 960, margin: "0 auto" }}>
         {/* ── Header ── */}
         <section style={{ color: "white", marginBottom: 32 }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              marginBottom: 16,
-            }}
-          >
+          <div style={{ marginBottom: 16 }}>
             <div
               style={{
                 display: "inline-block",
@@ -207,21 +200,6 @@ export default function Page() {
             >
               RowLab
             </div>
-            <button
-              onClick={reset}
-              style={{
-                background: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(255,255,255,0.15)",
-                color: "rgba(255,255,255,0.7)",
-                borderRadius: 8,
-                padding: "6px 16px",
-                fontSize: 13,
-                cursor: "pointer",
-                letterSpacing: 0.2,
-              }}
-            >
-              Reset
-            </button>
           </div>
           <h1
             style={{
@@ -258,6 +236,41 @@ export default function Page() {
             border: "1px solid rgba(15, 23, 42, 0.06)",
           }}
         >
+          {/* Card top row: Reset button right-aligned */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              marginBottom: 16,
+            }}
+          >
+            <button
+              onClick={reset}
+              style={{
+                padding: "6px 14px",
+                borderRadius: 8,
+                border: "1.5px solid #e2e8f0",
+                background: "transparent",
+                color: "#64748b",
+                fontSize: 12,
+                fontWeight: 600,
+                letterSpacing: 0.3,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "#cbd5e1";
+                e.currentTarget.style.color = "#0f172a";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "#e2e8f0";
+                e.currentTarget.style.color = "#64748b";
+              }}
+            >
+              Reset
+            </button>
+          </div>
+
           {/* Piece 1 */}
           <PieceLabel>Piece 1</PieceLabel>
           <div
