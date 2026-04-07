@@ -187,14 +187,7 @@ export default function Page() {
       <div style={{ maxWidth: 960, margin: "0 auto" }}>
         {/* ── Header ── */}
         <section style={{ color: "white", marginBottom: 32 }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              marginBottom: 16,
-            }}
-          >
+          <div style={{ marginBottom: 16 }}>
             <div
               style={{
                 display: "inline-block",
@@ -207,21 +200,6 @@ export default function Page() {
             >
               RowLab
             </div>
-            <button
-              onClick={reset}
-              style={{
-                background: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(255,255,255,0.15)",
-                color: "rgba(255,255,255,0.7)",
-                borderRadius: 8,
-                padding: "6px 16px",
-                fontSize: 13,
-                cursor: "pointer",
-                letterSpacing: 0.2,
-              }}
-            >
-              Reset
-            </button>
           </div>
           <h1
             style={{
@@ -326,6 +304,27 @@ export default function Page() {
           >
             {!result ? <EmptyState /> : <ResultBlock result={result} />}
           </div>
+
+          {/* ── Reset ── */}
+          <button
+            onClick={reset}
+            style={{
+              display: "block",
+              width: "100%",
+              marginTop: 16,
+              padding: "14px",
+              borderRadius: 14,
+              border: "1.5px solid #e2e8f0",
+              background: "transparent",
+              color: "#94a3b8",
+              fontSize: 15,
+              fontWeight: 500,
+              cursor: "pointer",
+              letterSpacing: 0.2,
+            }}
+          >
+            Reset
+          </button>
         </section>
       </div>
     </main>
