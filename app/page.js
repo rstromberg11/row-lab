@@ -1,86 +1,89 @@
 "use client";
 import { useMemo, useState } from "react";
 
-// ─── Time Parsing ────────────────────────────────────────────────────────────
-// Accepts:
-//   "4:17.55"  → 257.55s
-//   "41755"    → 257.55s  (4 min, 17 sec, 55 hundredths)
-//   "421755"   → 2537.55s (42 min, 17 sec, 55 hundredths — for long pieces)
+// ── Time parsing ──────────────────────────────────────────────────────────────
+// Accepts several input styles and returns total seconds (or null if invalid).
+// Used both for calculation and to determine if a field is "complete".
+//
+//   "4:17.55"  → 257.55   (already formatted)
+//   "41755"    → 257.55   (5-digit shorthand: m ss hh)
+//   "421755"   → 2537.55  (6-digit shorthand: mm ss hh — for longer pieces)
+//   "4:17"     → 257.00   (m:ss with no hundredths — accepted as 4:17.00)
+//   "417"      → 257.00   (3-digit shorthand: m ss — accepted as 4:17.00)
+//   "4"        → null     (incomplete — no calculation triggered)
+//   "42"       → null     (incomplete)
 function parseTime(input) {
   if (!input) return null;
   const cleaned = input.trim();
 
-  // Format with colon: m:ss.hh or mm:ss.hh
+  // ── Colon format: "4:17.55" or "4:17" ──
   if (cleaned.includes(":")) {
     const [minPart, secPart] = cleaned.split(":");
     const minutes = Number(minPart);
     const seconds = Number(secPart);
     if (isNaN(minutes) || isNaN(seconds)) return null;
+    // Require at least m:ss (not just "4:")
+    if (secPart.replace(/\D/g, "").length < 2) return null;
     return minutes * 60 + seconds;
   }
 
-  // Shorthand: last 4 digits = SS.HH, everything before = minutes
+  // ── Digit shorthand ──
   const digits = cleaned.replace(/\D/g, "");
+
+  // 3 digits: m ss  → e.g. "417" = 4:17.00
+  if (digits.length === 3) {
+    const mins = Number(digits[0]);
+    const secs = Number(digits.slice(1));
+    if (isNaN(mins) || isNaN(secs) || secs >= 60) return null;
+    return mins * 60 + secs;
+  }
+
+  // 5–6 digits: m ss hh or mm ss hh
   if (digits.length >= 5) {
     const hundredths = Number(digits.slice(-2)) / 100;
     const secs = Number(digits.slice(-4, -2));
     const mins = Number(digits.slice(0, -4));
     if (isNaN(mins) || isNaN(secs) || isNaN(hundredths)) return null;
-    if (secs >= 60) return null; // invalid
+    if (secs >= 60) return null;
     return mins * 60 + secs + hundredths;
   }
 
-  // No fallback — partial inputs (e.g. "4", "42") return null
-  // and do not trigger a result until a complete time is entered.
-  return null;
+  return null; // 1, 2, or 4 digits — incomplete
 }
 
-// ─── Formatting ──────────────────────────────────────────────────────────────
+// ── Canonical display format ──────────────────────────────────────────────────
+// Formats total seconds → "m:ss.hh"
 function formatTime(totalSeconds) {
-  const abs = Math.abs(totalSeconds);
-  const mins = Math.floor(abs / 60);
-  const secs = (abs % 60).toFixed(2).padStart(5, "0");
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = (totalSeconds % 60).toFixed(2).padStart(5, "0");
   return `${mins}:${secs}`;
 }
 
-function formatDiff(seconds) {
-  const abs = Math.abs(seconds).toFixed(2);
-  return seconds >= 0 ? `+${abs}s` : `−${abs}s`;
+// ── On-blur formatter ─────────────────────────────────────────────────────────
+// When the user leaves a field, reformat their raw input into "m:ss.hh".
+// If the input can't be parsed yet, leave it as-is.
+function reformatOnBlur(raw) {
+  const parsed = parseTime(raw);
+  return parsed !== null ? formatTime(parsed) : raw;
 }
 
-// ─── Seat Race Calculation ───────────────────────────────────────────────────
-// Method: UW Addition (total time comparison)
-// Each athlete's piece times are summed. Lower total = faster = winner.
-// This is mathematically identical to the margin-subtraction method and
-// correctly accounts for both boats slowing down or speeding up after the swap.
-//
-// Variables:
-//   a1 = Athlete A time, Piece 1  (A is in Boat 1)
-//   b1 = Athlete B time, Piece 1  (B is in Boat 2)
-//   a2 = Athlete A time, Piece 2  (A is now in Boat 2 — after swap)
-//   b2 = Athlete B time, Piece 2  (B is now in Boat 1 — after swap)
-//
-// net = (B total) − (A total). Positive → A wins. Negative → B wins.
-
+// ── Seat race calculation ─────────────────────────────────────────────────────
+// UW addition method: sum each athlete's piece times, compare totals.
+// Lower total = faster = winner.
+// net = totalB − totalA. Positive → A wins. Negative → B wins.
 function calcResult(a1, b1, a2, b2) {
   const totalA = a1 + a2;
   const totalB = b1 + b2;
-  const net = totalB - totalA; // positive = A wins (lower total time)
+  const net = totalB - totalA;
   const absNet = Math.abs(net);
 
-  // Piece margins (which athlete's boat was faster in each piece)
-  // Piece 1: a1 vs b1. Positive margin = A's boat was faster.
-  const piece1Margin = b1 - a1;
-  // Piece 2: a2 vs b2. Positive margin = A's boat (now Boat 2) was faster.
-  const piece2Margin = b2 - a2;
+  const piece1Margin = b1 - a1; // positive = A's boat faster in piece 1
+  const piece2Margin = b2 - a2; // positive = A's boat faster in piece 2
 
-  // Boat speed changes after the swap (for coach context)
-  // Boat 1: had A in piece 1 (time = a1), now has B in piece 2 (time = b2)
-  const boat1Change = b2 - a1; // positive = Boat 1 slowed when B got in
-  // Boat 2: had B in piece 1 (time = b1), now has A in piece 2 (time = a2)
-  const boat2Change = a2 - b1; // positive = Boat 2 slowed when A got in
+  // How each boat changed after the swap
+  const boat1Change = b2 - a1; // Boat 1 (was A's): positive = got slower with B
+  const boat2Change = a2 - b1; // Boat 2 (was B's): positive = got slower with A
 
-  // Verdict
   const tooClose = absNet < 0.3;
   const winner = tooClose ? null : net > 0 ? "A" : "B";
 
@@ -119,7 +122,7 @@ function calcResult(a1, b1, a2, b2) {
   };
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default function Page() {
   const [a1, setA1] = useState("");
   const [b1, setB1] = useState("");
@@ -192,7 +195,6 @@ export default function Page() {
               Reset
             </button>
           </div>
-
           <h1
             style={{
               fontSize: "clamp(36px, 6vw, 64px)",
@@ -213,8 +215,9 @@ export default function Page() {
               margin: 0,
             }}
           >
-            Enter times for both pieces. RowLab compares total times — the
-            method that catches when both boats slow down after the swap.
+            Enter times for both pieces. RowLab compares total piece times —
+            the method used by elite programs that accounts for actual boat
+            speed, not just who crossed first.
           </p>
         </section>
 
@@ -238,18 +241,8 @@ export default function Page() {
               marginBottom: 24,
             }}
           >
-            <TimeInput
-              label="Athlete A"
-              value={a1}
-              onChange={setA1}
-              placeholder="4:17.55 or 41755"
-            />
-            <TimeInput
-              label="Athlete B"
-              value={b1}
-              onChange={setB1}
-              placeholder="4:27.85 or 42785"
-            />
+            <TimeInput label="Athlete A" value={a1} onChange={setA1} />
+            <TimeInput label="Athlete B" value={b1} onChange={setB1} />
           </div>
 
           {/* Swap divider */}
@@ -272,7 +265,7 @@ export default function Page() {
                 whiteSpace: "nowrap",
               }}
             >
-              ↕ Athletes Swap
+              ↕ Athletes Swap Boats
             </span>
             <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
           </div>
@@ -287,21 +280,11 @@ export default function Page() {
               marginBottom: 28,
             }}
           >
-            <TimeInput
-              label="Athlete A"
-              value={a2}
-              onChange={setA2}
-              placeholder="4:27.28 or 42728"
-            />
-            <TimeInput
-              label="Athlete B"
-              value={b2}
-              onChange={setB2}
-              placeholder="4:20.27 or 42027"
-            />
+            <TimeInput label="Athlete A" value={a2} onChange={setA2} />
+            <TimeInput label="Athlete B" value={b2} onChange={setB2} />
           </div>
 
-          {/* ── Result Block ── */}
+          {/* ── Result ── */}
           <div
             style={{
               padding: 24,
@@ -314,11 +297,7 @@ export default function Page() {
               transition: "background 0.3s",
             }}
           >
-            {!result ? (
-              <EmptyState />
-            ) : (
-              <ResultBlock result={result} />
-            )}
+            {!result ? <EmptyState /> : <ResultBlock result={result} />}
           </div>
         </section>
       </div>
@@ -326,26 +305,10 @@ export default function Page() {
   );
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function PieceLabel({ children }) {
-  return (
-    <div
-      style={{
-        fontSize: 11,
-        fontWeight: 700,
-        letterSpacing: 1.2,
-        color: "#94a3b8",
-        textTransform: "uppercase",
-        marginBottom: 10,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function TimeInput({ label, value, onChange, placeholder }) {
+// ── TimeInput ─────────────────────────────────────────────────────────────────
+// User types freely. On blur, input is reformatted to "m:ss.hh".
+// Accepts: "41755", "4:17.55", "417", "4:17" — all become "4:17.55"/"4:17.00".
+function TimeInput({ label, value, onChange }) {
   return (
     <div>
       <label
@@ -364,7 +327,8 @@ function TimeInput({ label, value, onChange, placeholder }) {
         inputMode="decimal"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
+        onBlur={(e) => onChange(reformatOnBlur(e.target.value))}
+        placeholder="4:17.55"
         style={{
           width: "100%",
           boxSizing: "border-box",
@@ -383,6 +347,24 @@ function TimeInput({ label, value, onChange, placeholder }) {
   );
 }
 
+// ── Supporting components ─────────────────────────────────────────────────────
+function PieceLabel({ children }) {
+  return (
+    <div
+      style={{
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: 1.2,
+        color: "#94a3b8",
+        textTransform: "uppercase",
+        marginBottom: 10,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 function EmptyState() {
   return (
     <>
@@ -393,9 +375,9 @@ function EmptyState() {
         Enter all four times
       </div>
       <div style={{ fontSize: 15, color: "#64748b", lineHeight: 1.6 }}>
-        RowLab adds each athlete's piece times and compares totals — the
-        method that correctly accounts for both boats speeding up or slowing
-        down after the swap.
+        RowLab adds each athlete's piece times and compares totals — the method
+        that correctly accounts for both boats speeding up or slowing down after
+        the swap.
       </div>
     </>
   );
@@ -407,8 +389,6 @@ function ResultBlock({ result }) {
     story,
     totalA,
     totalB,
-    absNet,
-    tooClose,
     piece1Margin,
     piece2Margin,
     boat1Change,
@@ -417,14 +397,15 @@ function ResultBlock({ result }) {
 
   return (
     <>
-      {/* Label */}
       <div
-        style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", marginBottom: 8 }}
+        style={{
+          fontSize: 14,
+          color: "rgba(255,255,255,0.55)",
+          marginBottom: 8,
+        }}
       >
         Seat Race Result
       </div>
-
-      {/* Primary verdict */}
       <div
         style={{
           fontSize: "clamp(26px, 4vw, 40px)",
@@ -436,8 +417,6 @@ function ResultBlock({ result }) {
       >
         {verdict}
       </div>
-
-      {/* Story */}
       <p
         style={{
           margin: "0 0 22px",
@@ -450,7 +429,6 @@ function ResultBlock({ result }) {
         {story}
       </p>
 
-      {/* Total times */}
       <div
         style={{
           display: "grid",
@@ -459,19 +437,10 @@ function ResultBlock({ result }) {
           marginBottom: 16,
         }}
       >
-        <MetricCard
-          label="Athlete A Total"
-          value={formatTime(totalA)}
-          sub={null}
-        />
-        <MetricCard
-          label="Athlete B Total"
-          value={formatTime(totalB)}
-          sub={null}
-        />
+        <MetricCard label="Athlete A Total" value={formatTime(totalA)} />
+        <MetricCard label="Athlete B Total" value={formatTime(totalB)} />
       </div>
 
-      {/* Piece-by-piece breakdown */}
       <div
         style={{
           borderTop: "1px solid rgba(255,255,255,0.1)",
@@ -508,20 +477,20 @@ function ResultBlock({ result }) {
             Boat Speed After Swap
           </div>
           <BreakdownRow
-            label="A's boat (now with B)"
+            label="Boat 1 — A then B"
             detail={
               boat1Change > 0
-                ? `${boat1Change.toFixed(2)}s slower`
-                : `${Math.abs(boat1Change).toFixed(2)}s faster`
+                ? `${boat1Change.toFixed(2)}s slower with B`
+                : `${Math.abs(boat1Change).toFixed(2)}s faster with B`
             }
             highlight={boat1Change > 0 ? "slow" : "fast"}
           />
           <BreakdownRow
-            label="B's boat (now with A)"
+            label="Boat 2 — B then A"
             detail={
               boat2Change > 0
-                ? `${boat2Change.toFixed(2)}s slower`
-                : `${Math.abs(boat2Change).toFixed(2)}s faster`
+                ? `${boat2Change.toFixed(2)}s slower with A`
+                : `${Math.abs(boat2Change).toFixed(2)}s faster with A`
             }
             highlight={boat2Change > 0 ? "slow" : "fast"}
           />
