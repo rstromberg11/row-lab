@@ -157,14 +157,20 @@ export default function Page() {
   const [a2, setA2] = useState("");
   const [b2, setB2] = useState("");
 
+  const pa1 = useMemo(() => parseTime(a1), [a1]);
+  const pb1 = useMemo(() => parseTime(b1), [b1]);
+  const pa2 = useMemo(() => parseTime(a2), [a2]);
+  const pb2 = useMemo(() => parseTime(b2), [b2]);
+
+  // Per-piece margins — available as soon as both times for that piece are entered.
+  // piece1Margin > 0 → A's boat faster in piece 1; < 0 → B's boat faster.
+  const piece1Margin = pa1 !== null && pb1 !== null ? pb1 - pa1 : null;
+  const piece2Margin = pa2 !== null && pb2 !== null ? pb2 - pa2 : null;
+
   const result = useMemo(() => {
-    const pa1 = parseTime(a1);
-    const pb1 = parseTime(b1);
-    const pa2 = parseTime(a2);
-    const pb2 = parseTime(b2);
     if ([pa1, pb1, pa2, pb2].some((v) => v === null)) return null;
     return calcResult(pa1, pb1, pa2, pb2);
-  }, [a1, b1, a2, b2]);
+  }, [pa1, pb1, pa2, pb2]);
 
   const reset = () => {
     setA1("");
@@ -281,8 +287,18 @@ export default function Page() {
               marginBottom: 24,
             }}
           >
-            <TimeInput label="Athlete A" value={a1} onChange={setA1} />
-            <TimeInput label="Athlete B" value={b1} onChange={setB1} />
+            <TimeInput
+              label="Athlete A"
+              value={a1}
+              onChange={setA1}
+              hint={piece1Margin !== null && piece1Margin > 0 ? `Faster by ${piece1Margin.toFixed(2)}s` : null}
+            />
+            <TimeInput
+              label="Athlete B"
+              value={b1}
+              onChange={setB1}
+              hint={piece1Margin !== null && piece1Margin < 0 ? `Faster by ${Math.abs(piece1Margin).toFixed(2)}s` : null}
+            />
           </div>
 
           {/* Swap divider */}
@@ -320,8 +336,18 @@ export default function Page() {
               marginBottom: 28,
             }}
           >
-            <TimeInput label="Athlete A" value={a2} onChange={setA2} />
-            <TimeInput label="Athlete B" value={b2} onChange={setB2} />
+            <TimeInput
+              label="Athlete A"
+              value={a2}
+              onChange={setA2}
+              hint={piece2Margin !== null && piece2Margin > 0 ? `Faster by ${piece2Margin.toFixed(2)}s` : null}
+            />
+            <TimeInput
+              label="Athlete B"
+              value={b2}
+              onChange={setB2}
+              hint={piece2Margin !== null && piece2Margin < 0 ? `Faster by ${Math.abs(piece2Margin).toFixed(2)}s` : null}
+            />
           </div>
 
           {/* ── Result ── */}
@@ -360,7 +386,7 @@ const NAV_KEYS = new Set([
   "Home", "End",
 ]);
 
-function TimeInput({ label, value, onChange }) {
+function TimeInput({ label, value, onChange, hint }) {
   const digits = value.replace(/[^0-9]/g, "");
   // Use permissive parser for error detection — strict parseTime rejects valid
   // incomplete inputs like "417" (4:17.00) which would cause false positives.
@@ -443,11 +469,15 @@ function TimeInput({ label, value, onChange }) {
           WebkitAppearance: "none",
         }}
       />
-      {isError && (
+      {isError ? (
         <div style={{ marginTop: 6, fontSize: 12, color: "#ef4444", fontWeight: 500 }}>
           Invalid — seconds must be 00–59
         </div>
-      )}
+      ) : hint ? (
+        <div style={{ marginTop: 6, fontSize: 12, color: "#10b981", fontWeight: 600 }}>
+          {hint}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -494,8 +524,6 @@ function ResultBlock({ result }) {
     story,
     totalA,
     totalB,
-    piece1Margin,
-    piece2Margin,
     boat1Change,
     boat2Change,
   } = result;
@@ -550,25 +578,8 @@ function ResultBlock({ result }) {
         style={{
           borderTop: "1px solid rgba(255,255,255,0.1)",
           paddingTop: 16,
-          display: "grid",
-          gap: 8,
         }}
       >
-        <BreakdownRow
-          label="Piece 1"
-          detail={`Athlete ${piece1Margin >= 0 ? "A" : "B"}'s boat faster by ${Math.abs(piece1Margin).toFixed(2)}s`}
-        />
-        <BreakdownRow
-          label="Piece 2 (after swap)"
-          detail={`Athlete ${piece2Margin >= 0 ? "A" : "B"}'s boat faster by ${Math.abs(piece2Margin).toFixed(2)}s`}
-        />
-        <div
-          style={{
-            marginTop: 4,
-            borderTop: "1px solid rgba(255,255,255,0.07)",
-            paddingTop: 12,
-          }}
-        >
           <div
             style={{
               fontSize: 11,
@@ -599,7 +610,6 @@ function ResultBlock({ result }) {
             }
             highlight={boat2Change > 0 ? "slow" : "fast"}
           />
-        </div>
       </div>
     </>
   );
