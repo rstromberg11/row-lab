@@ -28,12 +28,12 @@ export default function Image() {
           style={{
             display: "flex",
             alignSelf: "flex-start",
-            padding: "10px 24px",
+            padding: "12px 28px",
             borderRadius: 999,
             background: "rgba(255,255,255,0.12)",
-            fontSize: 28,
-            fontWeight: 600,
-            color: "rgba(255,255,255,0.9)",
+            fontSize: 40,
+            fontWeight: 700,
+            color: "white",
             marginBottom: 36,
             letterSpacing: 0.5,
           }}
