@@ -588,35 +588,75 @@ export default function Page() {
         </section>
       </div>
 
-      {/* ── Feedback Button ── */}
-      <div style={{ textAlign: "center", marginTop: 32 }}>
+      {/* ── CTA Card ── */}
+      <section
+        style={{
+          marginTop: 16,
+          background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+          borderRadius: 24,
+          padding: "32px 28px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 24,
+          flexWrap: "wrap",
+          border: "1px solid rgba(255,255,255,0.06)",
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 240 }}>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: 1.2,
+              color: "rgba(255,255,255,0.35)",
+              textTransform: "uppercase",
+              marginBottom: 10,
+            }}
+          >
+            What's Next
+          </div>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 17,
+              fontWeight: 600,
+              lineHeight: 1.6,
+              color: "rgba(255,255,255,0.9)",
+            }}
+          >
+            RowLab is building a performance app for competitive rowers. Tell us what matters to your crew — and how to make RowLab better.
+          </p>
+        </div>
         <button
           onClick={openFeedback}
           style={{
-            background: "transparent",
-            border: "1.5px solid rgba(255,255,255,0.18)",
-            color: "rgba(255,255,255,0.5)",
-            padding: "10px 22px",
-            borderRadius: 999,
-            fontSize: 13,
-            fontWeight: 600,
+            flexShrink: 0,
+            padding: "13px 24px",
+            borderRadius: 14,
+            border: "1.5px solid rgba(255,255,255,0.2)",
+            background: "rgba(255,255,255,0.08)",
+            color: "white",
+            fontSize: 14,
+            fontWeight: 700,
             cursor: "pointer",
             fontFamily: "inherit",
-            letterSpacing: 0.3,
+            letterSpacing: 0.2,
             transition: "all 0.15s",
+            whiteSpace: "nowrap",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "rgba(255,255,255,0.4)";
-            e.currentTarget.style.color = "rgba(255,255,255,0.8)";
+            e.currentTarget.style.background = "rgba(255,255,255,0.14)";
+            e.currentTarget.style.borderColor = "rgba(255,255,255,0.35)";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "rgba(255,255,255,0.18)";
-            e.currentTarget.style.color = "rgba(255,255,255,0.5)";
+            e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+            e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)";
           }}
         >
-          Share Feedback
+          Share Feedback & Ideas
         </button>
-      </div>
+      </section>
     </main>
   );
 }
