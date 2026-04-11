@@ -1,18 +1,17 @@
 export const metadata = {
-  title: "RowLab",
-  description: "Seat race calculator for rowers",
+  title: "RowLab — Settle Seat Races Fast",
+  description: "Not just who crossed first — who actually moved the boat. The seat race calculator built for competitive rowing.",
   openGraph: {
-    title: "RowLab — Seat Race Calculator",
-    description: "Enter times for both pieces. RowLab compares each athlete's total time — not just who crossed first.",
+    title: "RowLab — Settle Seat Races Fast",
+    description: "Not just who crossed first — who actually moved the boat. The seat race calculator built for competitive rowing.",
     siteName: "RowLab",
   },
   twitter: {
     card: "summary_large_image",
-    title: "RowLab — Seat Race Calculator",
-    description: "Enter times for both pieces. RowLab compares each athlete's total time — not just who crossed first.",
+    title: "RowLab — Settle Seat Races Fast",
+    description: "Not just who crossed first — who actually moved the boat. The seat race calculator built for competitive rowing.",
   },
 };
-
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
