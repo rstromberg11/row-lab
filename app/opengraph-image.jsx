@@ -28,13 +28,14 @@ export default function Image() {
           style={{
             display: "flex",
             alignSelf: "flex-start",
-            padding: "8px 18px",
+            padding: "10px 24px",
             borderRadius: 999,
-            background: "rgba(255,255,255,0.10)",
-            fontSize: 20,
-            color: "rgba(255,255,255,0.65)",
+            background: "rgba(255,255,255,0.12)",
+            fontSize: 28,
+            fontWeight: 600,
+            color: "rgba(255,255,255,0.9)",
             marginBottom: 36,
-            letterSpacing: 1,
+            letterSpacing: 0.5,
           }}
         >
           RowLab
@@ -56,13 +57,13 @@ export default function Image() {
         <div
           style={{
             fontSize: 38,
-            fontWeight: 600,
-            color: "rgba(255,255,255,0.85)",
+            fontWeight: 500,
+            color: "rgba(255,255,255,0.75)",
             lineHeight: 1.45,
             maxWidth: 860,
           }}
         >
-          Not just who crossed first — who actually moved the boat.
+          Not just who crossed first — calculates who moved the boat faster.
         </div>
         {/* Bottom accent: small "rowing stroke" divider */}
         <div
