@@ -62,10 +62,7 @@ export default function Image() {
             maxWidth: 860,
           }}
         >
-          Not just who crossed first —{" "}
-          <span style={{ color: "rgba(255,255,255,0.45)" }}>
-            who actually moved the boat.
-          </span>
+          Not just who crossed first — who actually moved the boat.
         </div>
         {/* Bottom accent: small "rowing stroke" divider */}
         <div
