@@ -2,7 +2,7 @@
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const TO_EMAIL = process.env.FEEDBACK_TO_EMAIL;
+const TO_EMAIL = process.env.FEEDBACK_TO_EMAIL || "rstromberg11@gmail.com";
 
 export async function POST(request) {
   try {
