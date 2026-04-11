@@ -283,7 +283,7 @@ export default function Page() {
                   <div style={{ fontSize: 48, marginBottom: 16 }}>🙌</div>
                   <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 10 }}>Thanks for the feedback!</div>
                   <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 15, lineHeight: 1.6, margin: "0 0 24px" }}>
-                    This helps make RowLab better for every coach on the bank.
+                    This helps build faster teams — and a better RowLab for everyone.
                   </p>
                   <button
                     onClick={closeFeedback}
