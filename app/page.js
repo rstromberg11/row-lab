@@ -617,7 +617,6 @@ export default function Page() {
           Share Feedback
         </button>
       </div>
-    </div>
     </main>
   );
 }
