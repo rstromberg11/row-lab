@@ -3,14 +3,11 @@
 // and injects the <meta property="og:image"> tag — no manual wiring needed.
 //
 // iMessage, Slack, Twitter, etc. all read that tag to generate link previews.
-
 import { ImageResponse } from "next/og";
-
 export const runtime = "edge";
 export const alt = "RowLab — Seat Race Calculator";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-
 export default function Image() {
   return new ImageResponse(
     (
@@ -42,7 +39,6 @@ export default function Image() {
         >
           RowLab
         </div>
-
         {/* Headline */}
         <div
           style={{
@@ -50,26 +46,27 @@ export default function Image() {
             fontWeight: 700,
             color: "white",
             lineHeight: 1,
-            marginBottom: 28,
+            marginBottom: 24,
             letterSpacing: -2,
           }}
         >
           Settle seat races fast.
         </div>
-
         {/* Subline */}
         <div
           style={{
-            fontSize: 30,
-            color: "rgba(255,255,255,0.60)",
-            lineHeight: 1.55,
+            fontSize: 38,
+            fontWeight: 600,
+            color: "rgba(255,255,255,0.85)",
+            lineHeight: 1.45,
             maxWidth: 860,
           }}
         >
-          Enter times for both pieces. RowLab compares each athlete's total
-          time — not just who crossed first.
+          Not just who crossed first —{" "}
+          <span style={{ color: "rgba(255,255,255,0.45)" }}>
+            who actually moved the boat.
+          </span>
         </div>
-
         {/* Bottom accent: small "rowing stroke" divider */}
         <div
           style={{
